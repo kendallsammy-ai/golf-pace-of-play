@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Golf Timing Sheet</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f4; --bg3: #e8e8e6;
+    --text: #1a1a1a; --text2: #6b7280; --text3: #9ca3af;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --info-bg: #e6f1fb; --info-text: #185fa5; --info-border: rgba(24,95,165,0.3);
+    --success-bg: #eaf3de; --success-text: #3b6d11; --success-border: rgba(59,109,17,0.3);
+    --warning-bg: #faeeda; --warning-text: #854f0b; --warning-border: rgba(133,79,11,0.3);
+    --danger-text: #a32d2d; --danger-border: rgba(163,45,45,0.3);
+    --radius: 8px; --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #282825; --bg3: #343431;
+      --text: #f0ede8; --text2: #a09d96; --text3: #6b6860;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --info-bg: #0c447c; --info-text: #b5d4f4; --info-border: rgba(181,212,244,0.3);
+      --success-bg: #27500a; --success-text: #c0dd97; --success-border: rgba(192,221,151,0.3);
+      --warning-bg: #633806; --warning-text: #fac775; --warning-border: rgba(250,199,117,0.3);
+      --danger-text: #f09595; --danger-border: rgba(240,149,149,0.3);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:15px;min-height:100vh}
+  .app-shell{max-width:720px;margin:0 auto;padding:0.75rem}
+  /* ── HEADER ── */
+  header{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:0.875rem 1rem;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:16px;font-weight:600}
+  header p{font-size:12px;color:var(--text2);margin-top:2px}
+  /* ── NAV ── */
+  .nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:0.75rem}
+  .nav button{background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text2);white-space:nowrap;-webkit-tap-highlight-color:transparent}
+  .nav button.active{background:var(--info-bg);color:var(--info-text);border-color:var(--info-border);font-weight:500}
+  .nav button:hover{background:var(--bg2)}
+  /* ── SECTIONS ── */
+  .section{display:none}.section.active{display:block}
+  /* ── CARDS ── */
+  .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:0.75rem}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .card-title{font-size:15px;font-weight:500}
+  /* ── FORMS ── */
+  label{font-size:13px;color:var(--text2);display:block;margin-bottom:4px;margin-top:10px}
+  input,select,textarea{width:100%;font-size:16px;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;-webkit-appearance:none;appearance:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--info-text);box-shadow:0 0 0 3px var(--info-bg)}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  /* ── BUTTONS ── */
+  .btn{background:transparent;border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 16px;font-size:14px;cursor:pointer;color:var(--text);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .btn:hover{background:var(--bg2)}
+  .btn:active{opacity:0.7}
+  .btn-primary{background:var(--info-bg);color:var(--info-text);border-color:var(--info-border)}
+  .btn-success{background:var(--success-bg);color:var(--success-text);border-color:var(--success-border)}
+  .btn-sm{padding:6px 12px;font-size:13px}
+  .btn-danger{color:var(--danger-text);border-color:var(--danger-border)}
+  .btn-lg{padding:14px;font-size:16px;font-weight:500;width:100%}
+  /* ── GROUPS ── */
+  .group-item{display:flex;align-items:flex-start;gap:10px;padding:12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg2);margin-bottom:8px}
+  .group-badge{background:var(--info-bg);color:var(--info-text);border-radius:var(--radius);font-size:13px;padding:3px 8px;min-width:58px;text-align:center;font-weight:500;white-space:nowrap}
+  .h18{background:var(--success-bg);color:var(--success-text);border-radius:var(--radius);font-size:11px;padding:2px 7px;font-weight:500}
+  .h9{background:var(--warning-bg);color:var(--warning-text);border-radius:var(--radius);font-size:11px;padding:2px 7px;font-weight:500}
+  .group-info{flex:1;min-width:0}
+  .group-sub{font-size:12px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* ── TEE CARDS (player view) ── */
+  .tee-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem}
+  .tee-card.is-9{border-left:4px solid var(--warning-border)}
+  .tee-card.is-18{border-left:4px solid var(--success-border)}
+  .tee-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;padding-bottom:10px;border-bottom:0.5px solid var(--border)}
+  .tee-badge{background:var(--success-bg);color:var(--success-text);border-radius:var(--radius);font-size:14px;padding:5px 12px;font-weight:600;white-space:nowrap}
+  /* ── HOLES GRID ── mobile: 3 cols, tablet+: 6 cols ── */
+  .holes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  @media(min-width:500px){.holes-grid{grid-template-columns:repeat(6,1fr)}}
+  .hole-cell{background:var(--bg2);border-radius:var(--radius);padding:8px 4px;text-align:center}
+  .hole-num{font-size:10px;color:var(--text2);margin-bottom:2px}
+  .hole-time{font-size:15px;font-weight:600}
+  .hole-cell.current{background:var(--warning-bg);border:2px solid var(--warning-text)}
+  .hole-cell.current .hole-num{color:var(--warning-text)}
+  .hole-cell.current .hole-time{color:var(--warning-text)}
+  .hole-cell.current .hole-by{color:var(--warning-text)}
+  .hole-cell.done{opacity:0.4}
+  .hole-by{font-size:10px;color:var(--text3);margin-top:2px}
+  /* ── CLOCK BAR ── */
+  .clock-bar{background:var(--info-bg);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:1rem;display:flex;align-items:center;gap:10px}
+  .clock-time{font-size:22px;font-weight:700;color:var(--info-text);font-variant-numeric:tabular-nums}
+  .clock-label{font-size:13px;color:var(--info-text);opacity:0.8}
+  /* ── PLAYER SEARCH CARD ── */
+  .player-search-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+  .player-search-card h2{font-size:20px;font-weight:600;margin-bottom:4px}
+  .player-search-card p{font-size:14px;color:var(--text2);margin-bottom:1rem}
+  /* ── MISC ── */
+  .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--text2);font-size:14px}
+  .upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;color:var(--text2);cursor:pointer;margin-bottom:10px}
+  .upload-zone:hover{background:var(--bg2)}
+  .import-tab{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 6px;font-size:13px;cursor:pointer;color:var(--text2);width:100%;text-align:center;-webkit-tap-highlight-color:transparent}
+  .import-tab.active{background:var(--info-bg);color:var(--info-text);border-color:var(--info-border);font-weight:500}
+  .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+  .chip{padding:8px 14px;border:0.5px solid var(--border2);border-radius:20px;font-size:13px;cursor:pointer;background:transparent;color:var(--text2);-webkit-tap-highlight-color:transparent}
+  .chip.active{background:var(--info-bg);color:var(--info-text);border-color:var(--info-border);font-weight:500}
+  .interval-row{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:6px}
+  .interval-cell label{font-size:10px;text-align:center;margin:0}
+  .interval-cell input{text-align:center;padding:6px 2px;font-size:14px}
+  .round-row{display:flex;align-items:center;gap:10px;padding:12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg2);margin-bottom:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .round-row:active{opacity:0.7}
+  .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:200;align-items:flex-end;justify-content:center;padding:0}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--bg);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:1.5rem 1.25rem;width:100%;max-width:520px;border:0.5px solid var(--border)}
+  @media(min-width:600px){
+    .modal-overlay{align-items:center;padding:1rem}
+    .modal{border-radius:var(--radius-lg)}
+  }
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+  .dot-green{background:#22c55e}.dot-amber{background:#f59e0b}
+  .status-banner{border-radius:var(--radius);padding:12px 14px;font-size:14px;margin-top:12px;font-weight:500}
+  .status-current{background:var(--warning-bg);color:var(--warning-text)}
+  .status-done{background:var(--success-bg);color:var(--success-text)}
+  .status-upcoming{background:var(--info-bg);color:var(--info-text)}
+  /* ── MOBILE: stack row to single col on small screens ── */
+  @media(max-width:400px){.row{grid-template-columns:1fr}}
+  @media print{
+    .nav,.print-hide{display:none!important}
+    #print{display:block!important}
+    .tee-card{page-break-inside:avoid}
+    body{background:white}
+    .card{border:1px solid #ccc}
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div>
+      <h1 id="header-title">Golf Timing Sheet</h1>
+      <p id="header-sub">Bay of Plenty Golf</p>
+    </div>
+    <div style="font-size:12px;color:var(--text2)" id="active-round-label"></div>
+  </header>
+
+  <div class="nav print-hide" id="main-nav">
+    <button class="active" onclick="showSection('rounds',this)">📋 Rounds</button>
+    <button onclick="showSection('setup',this)">⚙️ Setup</button>
+    <button onclick="showSection('intervals',this)">⏱ Intervals</button>
+    <button onclick="showSection('player',this)">👤 Player view</button>
+    <button onclick="showSection('share',this)">🔗 Share / QR</button>
+    <button onclick="showSection('print',this)">🖨 Print</button>
+  </div>
+
+  <!-- ROUNDS -->
+  <div id="rounds" class="section active">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Rounds</span>
+        <button class="btn btn-sm btn-primary" onclick="toggleNewRoundForm()">+ New round</button>
+      </div>
+      <div id="new-round-form" style="display:none;background:var(--bg2);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+        <label>Round name</label>
+        <input type="text" id="newRoundName" placeholder="e.g. Round 1 — Opotiki" style="margin-bottom:10px"/>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="addRound()">Create round</button>
+          <button class="btn btn-sm" onclick="toggleNewRoundForm()">Cancel</button>
+        </div>
+      </div>
+      <div id="round-list"></div>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="setup" class="section">
+    <div id="no-round-msg" class="empty-state" style="display:none">Select or create a round first</div>
+    <div id="setup-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title" id="setup-round-title">Round settings</span></div>
+        <div class="row">
+          <div><label>Total holes</label>
+            <select id="holes" onchange="saveRound();initIntervals()">
+              <option value="18">18 holes</option><option value="9">9 holes</option>
+            </select>
+          </div>
+          <div><label>Default interval (mins)</label><input type="number" id="defaultInterval" value="13" min="5" max="30" onchange="saveRound()"/></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Groups</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="toggleAddForm()">+ Add</button>
+            <button class="btn btn-sm btn-danger" onclick="clearAllGroups()">🗑 Clear all</button>
+          </div>
+        </div>
+        <div id="add-form" style="display:none;background:var(--bg2);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+          <div class="row">
+            <div><label>Tee time</label><input type="time" id="newTeeTime" value="10:20"/></div>
+            <div><label>Group name</label><input type="text" id="newGroupName" placeholder="Group A"/></div>
+          </div>
+          <div class="row" style="margin-top:0">
+            <div><label>Starting hole</label>
+              <select id="newStartHole">
+                <option value="1">Hole 1</option><option value="6">Hole 6</option>
+                <option value="10">Hole 10</option><option value="12">Hole 12</option>
+              </select>
+            </div>
+            <div><label>Holes to play</label>
+              <select id="newHolesCount"><option value="18">18 holes</option><option value="9">9 holes</option></select>
+            </div>
+          </div>
+          <div style="margin-top:6px"><label>Players (comma-separated)</label>
+            <input type="text" id="newPlayers" placeholder="Jane Smith, Mary Brown"/>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary btn-sm" onclick="addGroup()">Add</button>
+            <button class="btn btn-sm" onclick="toggleAddForm()">Cancel</button>
+          </div>
+        </div>
+
+        <div style="font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Import draw</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <button class="import-tab active" id="tab-pdf" onclick="setImportTab('pdf')">📄 PDF upload</button>
+          <button class="import-tab" id="tab-manual" onclick="setImportTab('manual')">✏️ Paste text</button>
+        </div>
+
+        <div id="import-pdf">
+          <div class="upload-zone" onclick="document.getElementById('pdfInput').click()">
+            <div style="font-size:22px;margin-bottom:4px">📄</div>
+            <div style="font-size:13px;font-weight:500">Upload tournament draw PDF</div>
+            <div style="font-size:11px;margin-top:3px">Detects Futures 18 and Futures 9 automatically</div>
+          </div>
+          <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)"/>
+        </div>
+
+        <div id="import-manual" style="display:none">
+          <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Copy and paste the draw text from any source — email, website, or document.</p>
+          <textarea id="pasteDrawText" placeholder="Paste draw text here...&#10;&#10;e.g.&#10;10:00AM Mohi, Te Mataara  Uerata, Nealson  Rowberry, Piwiki&#10;10:08AM Cartwright, Matthew  Williams, Perry  Evans, Amelia" style="height:140px;font-size:12px;margin-bottom:8px"></textarea>
+          <button class="btn btn-primary" style="width:100%" onclick="importPastedDraw()">Import pasted draw</button>
+        </div>
+
+
+        <div id="import-status" style="margin-top:8px;margin-bottom:4px;font-size:12px;color:var(--text2)"></div>
+
+        <div class="filter-bar print-hide">
+          <button class="chip active" onclick="setFilter('group','all',this)">All</button>
+          <button class="chip" onclick="setFilter('group','18',this)">18 hole</button>
+          <button class="chip" onclick="setFilter('group','9',this)">9 hole</button>
+        </div>
+        <div id="group-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERVALS -->
+  <div id="intervals" class="section">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Per-hole intervals</span></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Minutes allocated per hole. Applied to all groups when calculating schedules.</p>
+      <div id="interval-grid"></div>
+      <button class="btn btn-sm" style="margin-top:12px" onclick="resetIntervals()">↺ Reset to default</button>
+    </div>
+  </div>
+
+  <!-- PLAYER VIEW -->
+  <div id="player" class="section">
+    <div style="max-width:520px;margin:0 auto">
+      <div class="clock-bar">
+        <div>
+          <div class="clock-label">Current time</div>
+          <div class="clock-time" id="live-clock">--:--</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div id="clock-round-name" style="font-size:13px;font-weight:500;color:var(--info-text)"></div>
+          <div id="clock-round-sub" style="font-size:11px;color:var(--info-text);opacity:0.7;margin-top:1px"></div>
+        </div>
+      </div>
+      <div class="player-search-card">
+        <h2>⛳ Find your tee time</h2>
+        <p>Select your name or tee time below</p>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="chip active" id="search-tab-name" onclick="setSearchTab('name')" style="flex:1;text-align:center">By name</button>
+          <button class="chip" id="search-tab-tee" onclick="setSearchTab('tee')" style="flex:1;text-align:center">By tee time</button>
+        </div>
+        <div id="search-by-name">
+          <label>Your name</label>
+          <select id="playerNameSelect" onchange="showPlayerGroup()">
+            <option value="">— Select your name —</option>
+          </select>
+        </div>
+        <div id="search-by-tee" style="display:none">
+          <div class="row" style="margin-top:0">
+            <div>
+              <label>Tee time</label>
+              <select id="teeTimeSelect" onchange="populateStartHoles()">
+                <option value="">— Select —</option>
+              </select>
+            </div>
+            <div>
+              <label>Starting hole</label>
+              <select id="startHoleSelect" onchange="showTeeGroup()">
+                <option value="">— Select —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="player-results"></div>
+    </div>
+  </div>
+
+  <!-- SHARE / QR -->
+  <div id="share" class="section">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Player link</span></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Copy this link and paste it into your QR code generator. Players who open it will see only the player view — no admin access.</p>
+      <label>Round to share</label>
+      <select id="shareRoundSelect" onchange="updateShareLink()" style="margin-bottom:1rem"></select>
+      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text2);word-break:break-all;line-height:1.6;margin-bottom:12px;min-height:48px" id="share-url-display">Select a round above to generate the link</div>
+      <button class="btn btn-primary" onclick="copyShareUrl()" style="width:100%">📋 Copy player link</button>
+      <div id="copy-confirm" style="text-align:center;font-size:12px;color:var(--success-text);margin-top:8px;min-height:18px"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">How it works</span></div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7">
+        <div style="margin-bottom:6px">1. Select the round you want to share above</div>
+        <div style="margin-bottom:6px">2. Copy the link</div>
+        <div style="margin-bottom:6px">3. Paste into your QR code generator (e.g. qr-code-generator.com)</div>
+        <div>4. Print and display the QR code at the course</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRINT -->
+  <div id="print" class="section">
+    <div class="card print-hide">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="filter-bar" style="margin:0">
+          <button class="chip active" onclick="setFilter('print','all',this)">All</button>
+          <button class="chip" onclick="setFilter('print','18',this)">18 hole only</button>
+          <button class="chip" onclick="setFilter('print','9',this)">9 hole only</button>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">🖨 Print</button>
+      </div>
+    </div>
+    <div id="print-content"></div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="card-header"><span class="card-title">Edit group</span><button class="btn btn-sm" onclick="closeModal()">✕</button></div>
+    <input type="hidden" id="editGroupId"/>
+    <div class="row">
+      <div><label>Tee time</label><input type="time" id="editTeeTime"/></div>
+      <div><label>Group name</label><input type="text" id="editGroupName"/></div>
+    </div>
+    <div class="row" style="margin-top:0">
+      <div><label>Starting hole</label>
+        <select id="editStartHole">
+          <option value="1">Hole 1</option><option value="6">Hole 6</option>
+          <option value="10">Hole 10</option><option value="12">Hole 12</option>
+        </select>
+      </div>
+      <div><label>Holes to play</label>
+        <select id="editHolesCount"><option value="18">18 holes</option><option value="9">9 holes</option></select>
+      </div>
+    </div>
+    <div style="margin-top:6px"><label>Players (comma-separated)</label>
+      <input type="text" id="editPlayers"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary btn-sm" onclick="saveEdit()">Save</button>
+      <button class="btn btn-sm" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'golf_timing_v3';
+let db = { rounds: [], activeRoundId: null };
+let nextRoundId = 1, nextGroupId = 1;
+let filters = { group: 'all', player: 'all', print: 'all' };
+
+// ── PERSISTENCE ──────────────────────────────────────────────
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); } catch(e) {}
+}
+function loadDb() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      db = JSON.parse(raw);
+      nextRoundId = db.rounds.length ? Math.max(...db.rounds.map(r => r.id)) + 1 : 1;
+      const all = db.rounds.flatMap(r => r.groups || []);
+      nextGroupId = all.length ? Math.max(...all.map(g => g.id)) + 1 : 1;
+    }
+  } catch(e) {}
+}
+
+// ── ROUNDS ───────────────────────────────────────────────────
+function activeRound() { return db.rounds.find(r => r.id === db.activeRoundId) || null; }
+
+let newRoundFormOpen = false;
+function toggleNewRoundForm() {
+  newRoundFormOpen = !newRoundFormOpen;
+  document.getElementById('new-round-form').style.display = newRoundFormOpen ? 'block' : 'none';
+  if (newRoundFormOpen) setTimeout(() => document.getElementById('newRoundName').focus(), 50);
+}
+function addRound() {
+  const name = document.getElementById('newRoundName').value.trim();
+  if (!name) { document.getElementById('newRoundName').focus(); return; }
+  const r = { id: nextRoundId++, name, course: '', event: '', roundDate: '', holes: 18, defaultInterval: 13, intervals: Array(18).fill(13), groups: [] }; // course/event/date populated from PDF import
+  db.rounds.push(r);
+  db.activeRoundId = r.id;
+  document.getElementById('newRoundName').value = '';
+  newRoundFormOpen = false;
+  document.getElementById('new-round-form').style.display = 'none';
+  persist();
+  renderRoundList();
+  syncSetupInputs();
+  showSection('setup', document.querySelectorAll('.nav button')[1]);
+}
+
+function selectRound(id) {
+  db.activeRoundId = id;
+  persist();
+  renderRoundList();
+  syncSetupInputs();
+  initIntervals();
+  renderGroups();
+  updateHeaderLabel();
+}
+
+function deleteRound(id) {
+  db.rounds = db.rounds.filter(r => r.id !== id);
+  if (db.activeRoundId === id) db.activeRoundId = db.rounds[0]?.id || null;
+  persist();
+  renderRoundList();
+  syncSetupInputs();
+  updateHeaderLabel();
+}
+
+function renderRoundList() {
+  const el = document.getElementById('round-list');
+  if (!db.rounds.length) { el.innerHTML = '<div class="empty-state">No rounds yet. Create one to get started.</div>'; return; }
+  el.innerHTML = db.rounds.map(r => `
+    <div class="round-row" onclick="selectRound(${r.id})">
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:14px">${r.name} ${db.activeRoundId===r.id ? '<span style="font-size:11px;color:var(--info-text);margin-left:6px">● active</span>' : ''}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${r.groups.length} groups · ${r.holes} holes · ${r.defaultInterval} min intervals</div>
+      </div>
+      <button class="btn btn-sm" onclick="event.stopPropagation();selectRound(${r.id});showSection('setup',document.querySelectorAll('.nav button')[1])">Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteRound(${r.id})">🗑</button>
+    </div>`).join('');
+}
+
+function updateHeaderLabel() {
+  const r = activeRound();
+  document.getElementById('active-round-label').textContent = r ? r.name : '';
+}
+
+// ── SETUP ────────────────────────────────────────────────────
+function syncSetupInputs() {
+  const r = activeRound();
+  const hasRound = !!r;
+  document.getElementById('no-round-msg').style.display = hasRound ? 'none' : 'block';
+  document.getElementById('setup-content').style.display = hasRound ? 'block' : 'none';
+  if (!r) return;
+  document.getElementById('setup-round-title').textContent = r.name;
+  document.getElementById('holes').value = r.holes;
+  document.getElementById('defaultInterval').value = r.defaultInterval;
+}
+
+function saveRound() {
+  const r = activeRound(); if (!r) return;
+  r.holes = parseInt(document.getElementById('holes').value);
+  r.defaultInterval = parseInt(document.getElementById('defaultInterval').value) || 13;
+  persist();
+  renderRoundList();
+  updateHeaderLabel();
+}
+
+// ── INTERVALS ────────────────────────────────────────────────
+function initIntervals() {
+  const r = activeRound(); if (!r) return;
+  if (!r.intervals || r.intervals.length !== r.holes) r.intervals = Array(r.holes).fill(r.defaultInterval);
+  renderIntervalGrid();
+}
+
+function resetIntervals() {
+  const r = activeRound(); if (!r) return;
+  r.intervals = Array(r.holes).fill(r.defaultInterval);
+  persist(); renderIntervalGrid();
+}
+
+function renderIntervalGrid() {
+  const r = activeRound(); if (!r) return;
+  const grid = document.getElementById('interval-grid');
+  let html = '';
+  for (let row = 0; row < Math.ceil(r.holes / 6); row++) {
+    html += '<div class="interval-row">';
+    for (let col = 0; col < 6; col++) {
+      const i = row * 6 + col;
+      if (i >= r.holes) { html += '<div></div>'; continue; }
+      html += `<div class="interval-cell">
+        <label>Hole ${i+1}</label>
+        <input type="number" min="5" max="30" value="${r.intervals[i]}"
+          onchange="activeRound().intervals[${i}]=parseInt(this.value)||13;persist()"/>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+// ── TIMING CALC ──────────────────────────────────────────────
+function fmtMins(totalMins) {
+  const hh = Math.floor(totalMins / 60) % 24;
+  const mm = totalMins % 60;
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+function calcHoleTimes(teeTime, startHole, holesCount, intervals) {
+  const [h, m] = teeTime.split(':').map(Number);
+  const total = intervals.length;
+  const startIdx = (parseInt(startHole) || 1) - 1;
+  const result = [];
+  let cumMins = 0;
+  for (let i = 0; i < holesCount; i++) {
+    const idx = (startIdx + i) % total;
+    const interval = intervals[idx] || 13;
+    const teeInMins = h * 60 + m + cumMins;
+    cumMins += interval;
+    const completeByMins = h * 60 + m + cumMins;
+    result.push({
+      hole: idx + 1,
+      time: fmtMins(teeInMins),       // tee-in time (arrive on tee)
+      completeBy: fmtMins(completeByMins), // must clear hole by this time
+      completeByMins: completeByMins,
+      teeInMins: teeInMins
+    });
+  }
+  return result;
+}
+function nowMins() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+// ── GROUPS ───────────────────────────────────────────────────
+let addFormOpen = false;
+function toggleAddForm() {
+  addFormOpen = !addFormOpen;
+  document.getElementById('add-form').style.display = addFormOpen ? 'block' : 'none';
+}
+
+function addGroup() {
+  const r = activeRound(); if (!r) return;
+  const teeTime = document.getElementById('newTeeTime').value;
+  if (!teeTime) return;
+  const name = document.getElementById('newGroupName').value || `Group ${nextGroupId}`;
+  const startHole = parseInt(document.getElementById('newStartHole').value);
+  const holesCount = parseInt(document.getElementById('newHolesCount').value);
+  const players = document.getElementById('newPlayers').value.split(',').map(p => p.trim()).filter(Boolean);
+  r.groups.push({ id: nextGroupId++, teeTime, name, startHole, holesCount, players });
+  r.groups.sort((a, b) => a.teeTime.localeCompare(b.teeTime));
+  document.getElementById('newPlayers').value = '';
+  document.getElementById('newGroupName').value = '';
+  toggleAddForm(); persist(); renderGroups();
+}
+
+function deleteGroup(id) {
+  const r = activeRound(); if (!r) return;
+  r.groups = r.groups.filter(g => g.id !== id);
+  persist(); renderGroups();
+}
+
+function clearAllGroups() {
+  const r = activeRound(); if (!r) return;
+  r.groups = []; persist(); renderGroups();
+}
+
+function renderGroups() {
+  const r = activeRound();
+  const list = document.getElementById('group-list');
+  if (!r || !r.groups.length) { list.innerHTML = '<div class="empty-state">No groups yet. Add manually or import a PDF draw.</div>'; return; }
+  const filtered = r.groups.filter(g => filters.group === 'all' || String(g.holesCount) === filters.group);
+  if (!filtered.length) { list.innerHTML = '<div class="empty-state">No groups match this filter.</div>'; return; }
+  list.innerHTML = filtered.map(g => `
+    <div class="group-item">
+      <div style="text-align:center">
+        <div class="group-badge">${g.teeTime}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:3px">Tee ${g.startHole}</div>
+      </div>
+      <div class="group-info">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-weight:500;font-size:13px">${g.name}</span>
+          <span class="h${g.holesCount}">${g.holesCount}H</span>
+        </div>
+        <div class="group-sub">${g.players.join(' · ') || 'No players'}</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="openEdit(${g.id})">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── EDIT MODAL ───────────────────────────────────────────────
+function openEdit(id) {
+  const r = activeRound(); if (!r) return;
+  const g = r.groups.find(g => g.id === id); if (!g) return;
+  document.getElementById('editGroupId').value = id;
+  document.getElementById('editTeeTime').value = g.teeTime;
+  document.getElementById('editGroupName').value = g.name;
+  document.getElementById('editStartHole').value = g.startHole;
+  document.getElementById('editHolesCount').value = g.holesCount;
+  document.getElementById('editPlayers').value = g.players.join(', ');
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+function saveEdit() {
+  const r = activeRound(); if (!r) return;
+  const id = parseInt(document.getElementById('editGroupId').value);
+  const g = r.groups.find(g => g.id === id); if (!g) return;
+  g.teeTime = document.getElementById('editTeeTime').value;
+  g.name = document.getElementById('editGroupName').value;
+  g.startHole = parseInt(document.getElementById('editStartHole').value);
+  g.holesCount = parseInt(document.getElementById('editHolesCount').value);
+  g.players = document.getElementById('editPlayers').value.split(',').map(p => p.trim()).filter(Boolean);
+  r.groups.sort((a, b) => a.teeTime.localeCompare(b.teeTime));
+  persist(); renderGroups(); closeModal();
+}
+
+// ── IMPORT TAB SWITCHER ──────────────────────────────────────
+function setImportTab(tab) {
+  ['pdf','manual','url'].forEach(t => {
+    document.getElementById('import-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+// ── PASTE TEXT IMPORT ────────────────────────────────────────
+function importPastedDraw() {
+  const r = activeRound(); if (!r) { alert('Select a round first.'); return; }
+  const text = document.getElementById('pasteDrawText').value;
+  if (!text.trim()) return;
+  const imported = parseBoPDraw(text);
+  const status = document.getElementById('import-status');
+  if (!imported.length) {
+    status.innerHTML = '<span class="dot dot-amber"></span>No groups found — check the format matches a Bay of Plenty draw';
+    return;
+  }
+  imported.forEach(g => r.groups.push({ id: nextGroupId++, ...g }));
+  r.groups.sort((a, b) => a.teeTime.localeCompare(b.teeTime));
+  persist(); renderGroups();
+  const n18 = imported.filter(g => g.holesCount === 18).length;
+  const n9 = imported.filter(g => g.holesCount === 9).length;
+  status.innerHTML = `<span class="dot dot-green"></span>${imported.length} groups imported — ${n18} × 18 hole, ${n9} × 9 hole`;
+  document.getElementById('pasteDrawText').value = '';
+}
+
+// ── PDF IMPORT ───────────────────────────────────────────────
+async function handlePdfUpload(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const r = activeRound(); if (!r) { alert('Select a round first.'); return; }
+  const status = document.getElementById('import-status');
+  status.innerHTML = '<span class="dot dot-amber"></span>Reading PDF…';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    const imported = parseBoPDraw(text);
+    if (!imported.length) { status.innerHTML = '<span class="dot dot-amber"></span>No groups found — check PDF format'; return; }
+    imported.forEach(g => r.groups.push({ id: nextGroupId++, ...g }));
+    r.groups.sort((a, b) => a.teeTime.localeCompare(b.teeTime));
+    persist(); renderGroups();
+    const n18 = imported.filter(g => g.holesCount === 18).length;
+    const n9 = imported.filter(g => g.holesCount === 9).length;
+    status.innerHTML = `<span class="dot dot-green"></span>${imported.length} groups imported — ${n18} × 18 hole, ${n9} × 9 hole`;
+  } catch(e) {
+    status.innerHTML = '<span class="dot dot-amber"></span>Error: ' + e.message;
+  }
+  event.target.value = '';
+}
+
+function extractDrawMeta(text) {
+  const meta = { course: '', event: '', date: '' };
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (/^Course:/i.test(line.trim())) {
+      meta.course = line.replace(/^Course:\s*/i, '').trim();
+    }
+    if (/Bay of Plenty Golf/i.test(line)) {
+      meta.event = line.trim();
+    }
+  }
+  const dateMatch = text.match(/(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+(\d{4})/i);
+  if (dateMatch) {
+    const months = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    const m = months[dateMatch[2].toLowerCase().substring(0,3)];
+    meta.date = `${dateMatch[3]}-${m}-${String(dateMatch[1]).padStart(2,'0')}`;
+  }
+  return meta;
+}
+
+function parseBoPDraw(text) {
+  const groups = []; let groupNum = 1;
+  const normalized = text.replace(/\r/g, '');
+  const sectionRegex = /FUTURES\s+(\d+)\s+FIELD[^|]*\|\s*(\d+)(?:ST|ND|RD|TH)\s+TEE([\s\S]*?)(?=FUTURES\s+\d+\s+FIELD|Generated|$)/gi;
+  let secMatch;
+  while ((secMatch = sectionRegex.exec(normalized)) !== null) {
+    const holesCount = parseInt(secMatch[1]);
+    const teeHole = parseInt(secMatch[2]);
+    const block = secMatch[3];
+    const rowRegex = /(\d{1,2}:\d{2})\s*(AM|PM)\s+(.+?)(?=\d{1,2}:\d{2}\s*(?:AM|PM)|$)/gi;
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(block)) !== null) {
+      const teeTime = convertTo24h(rowMatch[1], rowMatch[2]);
+      if (!teeTime) continue;
+      const playerNames = parsePlayerNames(rowMatch[3].trim());
+      if (!playerNames.length) continue;
+      groups.push({ name: `Group ${groupNum++}`, teeTime, startHole: teeHole, holesCount, players: playerNames });
+    }
+  }
+  return groups;
+}
+
+function convertTo24h(timeStr, ampm) {
+  const [hStr, mStr] = timeStr.split(':');
+  let h = parseInt(hStr), m = parseInt(mStr);
+  if (isNaN(h) || isNaN(m)) return null;
+  if (/PM/i.test(ampm) && h !== 12) h += 12;
+  if (/AM/i.test(ampm) && h === 12) h = 0;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+function parsePlayerNames(block) {
+  const names = [];
+  const re = /([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝ][a-zA-ZÀ-ÿ'\-]+(?:\s+[A-Z][a-zA-ZÀ-ÿ'\-]+)*),\s*([A-Z][a-zA-ZÀ-ÿ'\-\s]+?)(?=\s+[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝ][a-zA-ZÀ-ÿ'\-]+,|\s*$)/g;
+  let m;
+  while ((m = re.exec(block)) !== null) names.push(`${m[2].trim()} ${m[1].trim()}`);
+  return names;
+}
+
+// ── PLAYER VIEW ──────────────────────────────────────────────
+let searchTab = 'name';
+
+function setSearchTab(tab) {
+  searchTab = tab;
+  document.getElementById('search-by-name').style.display = tab === 'name' ? 'block' : 'none';
+  document.getElementById('search-by-tee').style.display = tab === 'tee' ? 'block' : 'none';
+  document.getElementById('search-tab-name').classList.toggle('active', tab === 'name');
+  document.getElementById('search-tab-tee').classList.toggle('active', tab === 'tee');
+  document.getElementById('player-results').innerHTML = '';
+}
+
+function populatePlayerDropdowns() {
+  const r = activeRound(); if (!r) return;
+  // Populate name dropdown — collect all unique players sorted alphabetically
+  const allPlayers = [];
+  r.groups.forEach(g => g.players.forEach(p => { if (!allPlayers.includes(p)) allPlayers.push(p); }));
+  allPlayers.sort((a, b) => a.localeCompare(b));
+  const nameEl = document.getElementById('playerNameSelect');
+  if (nameEl) {
+    nameEl.innerHTML = '<option value="">— Select a player —</option>' +
+      allPlayers.map(p => `<option value="${p.replace(/"/g,'&quot;')}">${p}</option>`).join('');
+  }
+  // Populate tee time dropdown — unique tee times sorted
+  const teeTimes = [...new Set(r.groups.map(g => g.teeTime))].sort();
+  const teeEl = document.getElementById('teeTimeSelect');
+  if (teeEl) {
+    teeEl.innerHTML = '<option value="">— Select tee time —</option>' +
+      teeTimes.map(t => `<option value="${t}">${t}</option>`).join('');
+  }
+}
+
+function showPlayerGroup() {
+  const r = activeRound(); if (!r) return;
+  const name = document.getElementById('playerNameSelect').value;
+  const results = document.getElementById('player-results');
+  if (!name) { results.innerHTML = ''; return; }
+  const matched = r.groups.filter(g => g.players.includes(name));
+  results.innerHTML = matched.length ? matched.map(g => renderGroupCard(g, r, true)).join('')
+    : '<div class="empty-state">No group found for this player</div>';
+}
+
+function populateStartHoles() {
+  const r = activeRound(); if (!r) return;
+  const teeTime = document.getElementById('teeTimeSelect').value;
+  const holeEl = document.getElementById('startHoleSelect');
+  document.getElementById('player-results').innerHTML = '';
+  if (!teeTime) { holeEl.innerHTML = '<option value="">— Select hole —</option>'; return; }
+  const holes = [...new Set(r.groups.filter(g => g.teeTime === teeTime).map(g => g.startHole))].sort((a,b)=>a-b);
+  holeEl.innerHTML = '<option value="">— Select hole —</option>' +
+    holes.map(h => `<option value="${h}">Hole ${h}</option>`).join('');
+  if (holes.length === 1) { holeEl.value = holes[0]; showTeeGroup(); }
+}
+
+function showTeeGroup() {
+  const r = activeRound(); if (!r) return;
+  const teeTime = document.getElementById('teeTimeSelect').value;
+  const startHole = parseInt(document.getElementById('startHoleSelect').value);
+  const results = document.getElementById('player-results');
+  if (!teeTime || !startHole) { results.innerHTML = ''; return; }
+  const matched = r.groups.filter(g => g.teeTime === teeTime && g.startHole === startHole);
+  results.innerHTML = matched.length ? matched.map(g => renderGroupCard(g, r, true)).join('')
+    : '<div class="empty-state">No group found</div>';
+}
+
+// Keep filterGroups as alias called by showSection
+function filterGroups() {
+  populatePlayerDropdowns();
+}
+
+function renderGroupCard(g, r, showClock) {
+  const holeTimes = calcHoleTimes(g.teeTime, g.startHole, g.holesCount, r.intervals);
+  const badge = g.holesCount === 9 ? `<span class="h9">9 holes</span>` : `<span class="h18">18 holes</span>`;
+  const now = nowMins();
+  // Current hole = the one where now >= teeInMins and now < completeByMins
+  const currentIdx = holeTimes.findIndex(h => now >= h.teeInMins && now < h.completeByMins);
+  const roundStarted = holeTimes.length && now >= holeTimes[0].teeInMins;
+  const roundFinished = holeTimes.length && now >= holeTimes[holeTimes.length-1].completeByMins;
+
+  const holesHtml = holeTimes.map((h, i) => {
+    let cls = 'hole-cell';
+    if (showClock && roundStarted && !roundFinished) {
+      if (i === currentIdx) cls += ' current';
+      else if (i < currentIdx || (currentIdx === -1 && roundStarted)) cls += ' done';
+    }
+    return `<div class="${cls}">
+      <div class="hole-num">Hole ${h.hole}</div>
+      <div class="hole-time">${h.time}</div>
+      <div class="hole-by">by ${h.completeBy}</div>
+    </div>`;
+  }).join('');
+
+  let currentNote = '';
+  if (showClock && roundStarted && !roundFinished && currentIdx >= 0) {
+    const cur = holeTimes[currentIdx];
+    currentNote = `<div class="status-banner status-current">⛳ Now on hole ${cur.hole} — complete by ${cur.completeBy}</div>`;
+  } else if (showClock && roundFinished) {
+    currentNote = `<div class="status-banner status-done">✓ Round complete</div>`;
+  } else if (showClock && !roundStarted && holeTimes.length) {
+    currentNote = `<div class="status-banner status-upcoming">Tees off at ${g.teeTime}</div>`;
+  }
+
+  return `<div class="tee-card is-${g.holesCount}">
+    <div class="tee-header">
+      <div>
+        <div style="font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${g.name} ${badge}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px">${g.players.join(' · ') || '—'}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Starting hole ${g.startHole}</div>
+      </div>
+      <div class="tee-badge">Tee ${g.teeTime}</div>
+    </div>
+    <div class="holes-grid">${holesHtml}</div>
+    ${currentNote}
+  </div>`;
+}
+
+// ── PRINT ────────────────────────────────────────────────────
+function renderPrint() {
+  const r = activeRound();
+  const el = document.getElementById('print-content');
+  if (!r) { el.innerHTML = '<div class="empty-state">No active round</div>'; return; }
+  let groups = filters.print === 'all' ? r.groups : r.groups.filter(g => String(g.holesCount) === filters.print);
+  el.innerHTML = groups.length ? groups.map(g => renderGroupCard(g, r)).join('') : '<div class="empty-state">No groups to print</div>';
+}
+
+// ── SHARE ────────────────────────────────────────────────────
+function renderShare() {
+  const sel = document.getElementById('shareRoundSelect');
+  if (!db.rounds.length) { sel.innerHTML = '<option>No rounds yet</option>'; return; }
+  sel.innerHTML = db.rounds.map(r => `<option value="${r.id}" ${r.id === db.activeRoundId ? 'selected' : ''}>${r.name}</option>`).join('');
+  updateShareLink();
+}
+
+function buildShareUrl(roundId) {
+  const r = db.rounds.find(r => r.id === roundId); if (!r) return '';
+  const payload = { n: r.name, c: r.course, d: r.roundDate, e: r.event || r.e, i: r.intervals,
+    g: r.groups.map(g => ({ t: g.teeTime, s: g.startHole, h: g.holesCount, p: g.players, n: g.name })) };
+  const json = JSON.stringify(payload);
+  // Unicode-safe base64, then make URL-safe (no +, /, or = to trip up QR scanners)
+  const b64 = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
+    (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+  const encoded = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return `${window.location.origin}${window.location.pathname}?view=${encoded}`;
+}
+
+function updateShareLink() {
+  const sel = document.getElementById('shareRoundSelect');
+  if (!sel.value || !db.rounds.length) return;
+  const url = buildShareUrl(parseInt(sel.value));
+  const el = document.getElementById('share-url-display');
+  el.textContent = url || 'No data to share yet — add groups to this round first';
+}
+
+function copyShareUrl() {
+  const url = document.getElementById('share-url-display').textContent;
+  if (!url || url.startsWith('No data')) return;
+  const confirm_el = document.getElementById('copy-confirm');
+  navigator.clipboard.writeText(url)
+    .then(() => { confirm_el.textContent = '✓ Copied!'; setTimeout(() => confirm_el.textContent = '', 2500); })
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      confirm_el.textContent = '✓ Copied!'; setTimeout(() => confirm_el.textContent = '', 2500);
+    });
+}
+
+// ── SHARED VIEW (when loaded via ?view=...) ──────────────────
+function checkSharedView() {
+  const raw = window.location.search;
+  const match = raw.match(/[?&]view=([^&]*)/);
+  if (!match) return false;
+  try {
+    // Restore URL-safe base64 back to standard base64, add padding
+    const safe = match[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = safe + '=='.substring(0, (4 - safe.length % 4) % 4);
+    const json = decodeURIComponent(Array.from(atob(padded))
+      .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
+    const r = JSON.parse(json);
+    const round = {
+      id: 9999, name: r.n, course: r.c, roundDate: r.d, event: r.e,
+      holes: r.i.length, defaultInterval: 13, intervals: r.i,
+      groups: r.g.map((g, i) => ({ id: i, name: g.n, teeTime: g.t, startHole: g.s, holesCount: g.h, players: g.p }))
+    };
+    db.rounds = [round];
+    db.activeRoundId = 9999;
+    document.getElementById('header-title').textContent = r.e || r.n;
+    document.getElementById('header-sub').textContent = `${r.c || ''} · ${r.d || ''}`;
+    document.getElementById('main-nav').innerHTML =
+      '<button class="active" onclick="showSection(\'player\',this)">⛳ Find my tee time</button>';
+    showSection('player', document.querySelector('.nav button'));
+    populatePlayerDropdowns();
+    return true;
+  } catch(e) {
+    console.error('Share link decode error:', e);
+    document.getElementById('main-nav').innerHTML =
+      '<button class="active" onclick="showSection(\'player\',this)">⛳ Find my tee time</button>';
+    document.getElementById('player-results').innerHTML =
+      '<div class="empty-state">Could not load round data. Please scan the QR code again.</div>';
+    showSection('player', document.querySelector('.nav button'));
+    return true;
+  }
+}
+
+// ── NAV ──────────────────────────────────────────────────────
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'player') { filterGroups(); populatePlayerDropdowns(); }
+  if (id === 'print') renderPrint();
+  if (id === 'intervals') { syncSetupInputs(); initIntervals(); }
+  if (id === 'share') renderShare();
+  if (id === 'setup') { syncSetupInputs(); renderGroups(); }
+}
+
+function setFilter(type, val, el) {
+  filters[type] = val;
+  const parent = el.closest('.filter-bar') || el.parentElement;
+  if (parent) parent.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  if (type === 'group') renderGroups();
+  if (type === 'print') renderPrint();
+}
+
+// ── LIVE CLOCK ───────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const el = document.getElementById('live-clock');
+  if (el) el.textContent = `${hh}:${mm}`;
+  const r = activeRound();
+  const nameEl = document.getElementById('clock-round-name');
+  const subEl = document.getElementById('clock-round-sub');
+  if (nameEl && r) nameEl.textContent = r.name || '';
+  if (subEl && r) subEl.textContent = r.course ? `${r.course}${r.roundDate ? ' · ' + r.roundDate : ''}` : r.roundDate || '';
+  // Refresh player view cards so current-hole highlight stays accurate
+  // Re-render visible group card so current-hole highlight updates
+  const playerSection = document.getElementById('player');
+  if (playerSection && playerSection.classList.contains('active')) {
+    const res = document.getElementById('player-results');
+    if (res && res.innerHTML) {
+      if (searchTab === 'name') showPlayerGroup();
+      else showTeeGroup();
+    }
+  }
+}
+setInterval(updateClock, 15000); // refresh every 15 seconds
+updateClock();
+
+// ── INIT ─────────────────────────────────────────────────────
+loadDb();
+if (!checkSharedView()) {
+  renderRoundList();
+  syncSetupInputs();
+  if (activeRound()) initIntervals();
+  updateHeaderLabel();
+}
+</script>
+</body>
+</html>
