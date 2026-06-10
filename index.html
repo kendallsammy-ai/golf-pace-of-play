@@ -946,7 +946,7 @@ function checkSharedView() {
   if (!encoded) { showDebug('No encoded data in URL', ''); return true; }
 
   var latin1;
-  try { latin1 = atob(encoded); }
+  try { latin1 = atob(decodeURIComponent(encoded)); }
   catch(e) { showDebug('atob failed', e.message); return true; }
 
   var json;
