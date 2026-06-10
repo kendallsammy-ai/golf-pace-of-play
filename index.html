@@ -891,11 +891,8 @@ function buildShareUrl(roundId) {
   const r = db.rounds.find(r => r.id === roundId); if (!r) return '';
   const payload = { n: r.name, c: r.course, d: r.roundDate, e: r.event || r.e, i: r.intervals,
     g: r.groups.map(g => ({ t: g.teeTime, s: g.startHole, h: g.holesCount, p: g.players, n: g.name })) };
-  const json = JSON.stringify(payload);
-  // Unicode-safe base64, then make URL-safe (no +, /, or = to trip up QR scanners)
-  const b64 = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
-    (_, p1) => String.fromCharCode(parseInt(p1, 16))));
-  const encoded = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  // btoa(unescape(encodeURIComponent(...))) correctly encodes all Unicode as latin1 base64
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   return `${window.location.origin}${window.location.pathname}?view=${encoded}`;
 }
 
@@ -927,12 +924,12 @@ function checkSharedView() {
   const match = raw.match(/[?&]view=([^&]*)/);
   if (!match) return false;
   try {
-    // Restore URL-safe base64 back to standard base64, add padding
-    const safe = match[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = safe + '=='.substring(0, (4 - safe.length % 4) % 4);
-    const json = decodeURIComponent(Array.from(atob(padded))
-      .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
-    const r = JSON.parse(json);
+    const encoded = match[1];
+    // Decode: base64 (latin1) -> percent-encode each byte -> decodeURIComponent -> JSON
+    // This correctly handles all Unicode chars including Māori macrons and accented names
+    const latin1 = atob(encoded);
+    const pct = latin1.split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+    const r = JSON.parse(decodeURIComponent(pct));
     const round = {
       id: 9999, name: r.n, course: r.c, roundDate: r.d, event: r.e,
       holes: r.i.length, defaultInterval: 13, intervals: r.i,
