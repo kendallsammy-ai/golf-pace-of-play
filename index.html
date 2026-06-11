@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Golf Timing Sheet</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root {
     --bg: #ffffff; --bg2: #f5f5f4; --bg3: #e8e8e6;
@@ -129,6 +130,8 @@
     .tee-card{page-break-inside:avoid}
     body{background:white}
     .card{border:1px solid #ccc}
+    #print-qr-poster{display:block!important}
+    #share .card{display:none}
   }
 </style>
 </head>
@@ -313,21 +316,29 @@
   <!-- SHARE / QR -->
   <div id="share" class="section">
     <div class="card">
-      <div class="card-header"><span class="card-title">Player link</span></div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Copy this link and paste it into your QR code generator. Players who open it will see only the player view — no admin access.</p>
+      <div class="card-header"><span class="card-title">QR code &amp; player link</span></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Select a round to generate a QR code. Players scan it to go straight to their tee time — no admin access.</p>
       <label>Round to share</label>
       <select id="shareRoundSelect" onchange="updateShareLink()" style="margin-bottom:1rem"></select>
-      <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text2);word-break:break-all;line-height:1.6;margin-bottom:12px;min-height:48px" id="share-url-display">Select a round above to generate the link</div>
-      <button class="btn btn-primary" onclick="copyShareUrl()" style="width:100%">📋 Copy player link</button>
-      <div id="copy-confirm" style="text-align:center;font-size:12px;color:var(--success-text);margin-top:8px;min-height:18px"></div>
+      <div id="qr-container" style="display:none">
+        <div style="display:flex;justify-content:center;margin-bottom:1rem">
+          <div id="qr-code" style="background:white;padding:12px;border-radius:var(--radius);display:inline-block"></div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;font-size:11px;color:var(--text2);word-break:break-all;line-height:1.5;margin-bottom:12px" id="share-url-display"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="copyShareUrl()" style="flex:1">📋 Copy link</button>
+          <button class="btn" onclick="printQR()" style="flex:1">🖨 Print QR</button>
+        </div>
+        <div id="copy-confirm" style="text-align:center;font-size:12px;color:var(--success-text);margin-top:8px;min-height:18px"></div>
+      </div>
+      <div id="qr-placeholder" style="text-align:center;padding:2rem;color:var(--text2);font-size:13px">Select a round above to generate the QR code</div>
     </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">How it works</span></div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.7">
-        <div style="margin-bottom:6px">1. Select the round you want to share above</div>
-        <div style="margin-bottom:6px">2. Copy the link</div>
-        <div style="margin-bottom:6px">3. Paste into your QR code generator (e.g. qr-code-generator.com)</div>
-        <div>4. Print and display the QR code at the course</div>
+    <div id="print-qr-poster" style="display:none">
+      <div style="text-align:center;padding:2rem">
+        <div style="font-size:20px;font-weight:600;margin-bottom:4px" id="poster-title"></div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:1.5rem" id="poster-sub"></div>
+        <div id="qr-print" style="display:flex;justify-content:center;margin-bottom:1rem"></div>
+        <div style="font-size:15px;color:var(--text2)">Scan to find your tee time</div>
       </div>
     </div>
   </div>
@@ -887,21 +898,80 @@ function renderShare() {
   updateShareLink();
 }
 
+function generateQR(url, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  try {
+    new QRCode(el, {
+      text: url,
+      width: 220,
+      height: 220,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:red">QR error: ' + e.message + '</div>';
+  }
+}
+
+function printQR() {
+  const poster = document.getElementById('print-qr-poster');
+  poster.style.display = 'block';
+  window.print();
+  poster.style.display = 'none';
+}
+
+function compressPlayerName(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  return parts[0][0].toUpperCase() + '.' + parts[parts.length - 1];
+}
+function timeToMins(t) {
+  const [h, m] = t.split(':').map(Number); return h * 60 + m;
+}
 function buildShareUrl(roundId) {
   const r = db.rounds.find(r => r.id === roundId); if (!r) return '';
-  const payload = { n: r.name, c: r.course, d: r.roundDate, e: r.event || r.e, i: r.intervals,
-    g: r.groups.map(g => ({ t: g.teeTime, s: g.startHole, h: g.holesCount, p: g.players, n: g.name })) };
-  // btoa(unescape(encodeURIComponent(...))) correctly encodes all Unicode as latin1 base64
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  // Compress payload: abbreviated names, tee time as minutes, single interval value
+  const allSame = r.intervals.every(v => v === r.intervals[0]);
+  const payload = {
+    n: r.name, i: allSame ? r.intervals[0] : r.intervals,
+    g: r.groups.map(g => ({
+      t: timeToMins(g.teeTime),
+      s: g.startHole, h: g.holesCount,
+      p: g.players.map(compressPlayerName)
+    }))
+  };
+  // Use base64url encoding (no +, /, = chars) - survives phone QR scanners
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const encoded = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   return `${window.location.origin}${window.location.pathname}?view=${encoded}`;
 }
 
 function updateShareLink() {
   const sel = document.getElementById('shareRoundSelect');
   if (!sel.value || !db.rounds.length) return;
-  const url = buildShareUrl(parseInt(sel.value));
-  const el = document.getElementById('share-url-display');
-  el.textContent = url || 'No data to share yet — add groups to this round first';
+  const roundId = parseInt(sel.value);
+  const r = db.rounds.find(x => x.id === roundId);
+  const url = buildShareUrl(roundId);
+  const urlEl = document.getElementById('share-url-display');
+  const container = document.getElementById('qr-container');
+  const placeholder = document.getElementById('qr-placeholder');
+  if (!url || !r || !r.groups.length) {
+    container.style.display = 'none';
+    placeholder.style.display = 'block';
+    placeholder.textContent = 'Add groups to this round first';
+    return;
+  }
+  urlEl.textContent = url;
+  container.style.display = 'block';
+  placeholder.style.display = 'none';
+  generateQR(url, 'qr-code');
+  // Also set up print poster
+  document.getElementById('poster-title').textContent = r.event || r.name;
+  document.getElementById('poster-sub').textContent = [r.course, r.roundDate].filter(Boolean).join(' · ');
+  generateQR(url, 'qr-print');
 }
 
 function copyShareUrl() {
@@ -946,7 +1016,12 @@ function checkSharedView() {
   if (!encoded) { showDebug('No encoded data in URL', ''); return true; }
 
   var latin1;
-  try { latin1 = atob(decodeURIComponent(encoded)); }
+  try {
+    // Restore base64url to standard base64, add padding, then decode
+    var b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    var padded = b64 + '=='.slice(0, (4 - b64.length % 4) % 4);
+    latin1 = atob(padded);
+  }
   catch(e) { showDebug('atob failed', e.message); return true; }
 
   var json;
@@ -964,12 +1039,25 @@ function checkSharedView() {
     return true;
   }
 
+  // Handle interval: either a single number or array
+  var intervals = Array.isArray(r.i) ? r.i : Array(18).fill(r.i || 13);
+
+  // Convert tee time from minutes-since-midnight back to HH:MM
+  function minsToTime(m) {
+    return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+  }
+
   var round = {
     id: 9999, name: r.n || 'Round', course: r.c || '', roundDate: r.d || '', event: r.e || '',
-    holes: (r.i || []).length || 18, defaultInterval: 13,
-    intervals: r.i || Array(18).fill(13),
+    holes: intervals.length, defaultInterval: intervals[0] || 13,
+    intervals: intervals,
     groups: r.g.map(function(g, i) {
-      return { id: i, name: g.n, teeTime: g.t, startHole: g.s, holesCount: g.h, players: g.p || [] };
+      return {
+        id: i,
+        name: g.n || ('Group ' + (i+1)),
+        teeTime: typeof g.t === 'number' ? minsToTime(g.t) : g.t,
+        startHole: g.s, holesCount: g.h, players: g.p || []
+      };
     })
   };
 
