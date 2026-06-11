@@ -250,21 +250,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
       </div>
       <!-- Shotgun start settings (shown when shotgun draw detected) -->
-      <div id="shotgun-settings" class="inline-form" style="display:none;margin-bottom:8px">
-        <div style="font-size:13px;font-weight:500;margin-bottom:8px">⚡ Shotgun start detected</div>
-        <div class="row3" style="margin-top:0">
-          <div><label>Tee time (Wave 1)</label><input type="time" id="shotgun-start" value="08:45"/></div>
-          <div><label>Holes</label>
+      <div id="shotgun-settings" class="inline-form" style="display:none;margin-bottom:8px;border-color:var(--blue-border);background:var(--blue-bg)">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px;color:var(--blue)">⚡ Shotgun start draw detected</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Starting holes and teams have been read. Just confirm the tee time and we're done.</div>
+        <div class="row2" style="margin-top:0">
+          <div><label>Tee time</label><input type="time" id="shotgun-start" value="08:45"/></div>
+          <div><label>Holes to play</label>
             <select id="shotgun-holes">
               <option value="9">9 holes</option>
               <option value="18">18 holes</option>
             </select>
           </div>
-          <div><label>Interval (mins)</label><input type="number" id="shotgun-interval" value="13" min="5" max="30"/></div>
         </div>
         <div style="font-size:12px;color:var(--text2);margin-top:6px" id="wave2-preview"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button type="button" class="btn btn-primary btn-sm" onclick="confirmShotgunImport()">Import with these times</button>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button type="button" class="btn btn-primary" style="flex:1" onclick="confirmShotgunImport()">Import draw</button>
           <button type="button" class="btn btn-sm" onclick="cancelShotgunImport()">Cancel</button>
         </div>
       </div>
@@ -722,27 +722,34 @@ function saveEdit() {
 let pendingShotgunText = null;
 
 function isShotgunDraw(text) {
-  // Detect by presence of "Hole N" starting lines without tee times
-  return /Hole\s+\d+\s*(?:\(2nd\s+Group\))?\s+\w/i.test(text) &&
-    !/\d{1,2}:\d{2}\s*(?:AM|PM)/i.test(text);
+  // Must have "Hole N [optional (2nd Group)] TeamName" pattern
+  const hasShotgunPattern = /Hole\s+\d+\s*(?:\(2nd\s+Group\))?\s+[A-Z]/i.test(text);
+  if (!hasShotgunPattern) return false;
+  // A timed (non-shotgun) draw has times directly before player names: "10:00AM Name,"
+  // A shotgun draw only has times in headers like "Start: 8:15am"
+  const hasTeeTimes = /\d{1,2}:\d{2}\s*(?:AM|PM)\s+[A-Z][a-z]+,/i.test(text);
+  return !hasTeeTimes;
 }
 
 function updateWave2Preview() {
   const start = document.getElementById('shotgun-start').value;
   const holes = parseInt(document.getElementById('shotgun-holes').value);
-  const interval = parseInt(document.getElementById('shotgun-interval').value) || 13;
+  const interval = db.intervals[0] || 13;
   if (!start) return;
   const [h,m] = start.split(':').map(Number);
   const w2mins = h*60+m+holes*interval;
   const w2 = String(Math.floor(w2mins/60)%24).padStart(2,'0')+':'+String(w2mins%60).padStart(2,'0');
-  document.getElementById('wave2-preview').textContent = `Wave 2 tee time: ${w2} (Wave 1 + ${holes} holes × ${interval} mins)`;
+  // Only show wave 2 preview if the draw actually has a 2nd wave
+  const has2ndWave = pendingShotgunText && /2nd Group/i.test(pendingShotgunText);
+  const el = document.getElementById('wave2-preview');
+  el.textContent = has2ndWave ? `2nd wave tee time: ${w2}` : '';
 }
 
 function showShotgunSettings(text) {
   pendingShotgunText = text;
   document.getElementById('shotgun-settings').style.display = 'block';
   updateWave2Preview();
-  ['shotgun-start','shotgun-holes','shotgun-interval'].forEach(id => {
+  ['shotgun-start','shotgun-holes'].forEach(id => {
     document.getElementById(id).addEventListener('input', updateWave2Preview);
   });
 }
@@ -757,9 +764,7 @@ function confirmShotgunImport() {
   const ev = activeEvent(); if (!ev) return;
   const startTime = document.getElementById('shotgun-start').value || '08:45';
   const holes = parseInt(document.getElementById('shotgun-holes').value) || 9;
-  const interval = parseInt(document.getElementById('shotgun-interval').value) || 13;
-  // Temporarily override intervals for this import
-  db.intervals = Array(18).fill(interval);
+  const interval = db.intervals[0] || 13;
   const groups = parseShotgunDraw(pendingShotgunText, startTime, interval, holes);
   document.getElementById('shotgun-settings').style.display = 'none';
   pendingShotgunText = null;
@@ -777,6 +782,9 @@ function parseShotgunDraw(text, startTime, intervalMins, holes) {
   for (const part of parts) {
     const hm = part.match(/^Hole\s+(\d+)\s*(\(2nd\s+Group\))?/i);
     if (!hm) continue;
+    // Skip header rows that start with "STARTING", "TEAMS" etc
+    const afterHole = part.replace(/^Hole\s+\d+\s*(\(2nd\s+Group\))?\s*/i,'').trim();
+    if (/^STARTING|^TEAMS|^Players/i.test(afterHole)) continue;
     const holeNum = parseInt(hm[1]);
     const isWave2 = !!hm[2];
     const rest = part.replace(/^Hole\s+\d+\s*(\(2nd\s+Group\))?\s*/i,'').trim();
