@@ -723,12 +723,15 @@ let pendingShotgunText = null;
 
 function isShotgunDraw(text) {
   // Must have "Hole N [optional (2nd Group)] TeamName" pattern
-  const hasShotgunPattern = /Hole\s+\d+\s*(?:\(2nd\s+Group\))?\s+[A-Z]/i.test(text);
+  const hasShotgunPattern = /Hole\s+\d+\s*(?:\(2nd\s+Group\))?\s+[A-Za-z]/i.test(text);
   if (!hasShotgunPattern) return false;
-  // A timed (non-shotgun) draw has times directly before player names: "10:00AM Name,"
-  // A shotgun draw only has times in headers like "Start: 8:15am"
-  const hasTeeTimes = /\d{1,2}:\d{2}\s*(?:AM|PM)\s+[A-Z][a-z]+,/i.test(text);
-  return !hasTeeTimes;
+  // A timed (non-shotgun) draw has times directly before player names like "10:00AM Mohi,"
+  // Shotgun draws only have times in headers like "Start: 8:15am" or "Finish: 12pm"
+  const hasTeeTimes = /\d{1,2}:\d{2}\s*(?:AM|PM)\s+[A-Z][a-z]+[,\s]/i.test(text);
+  if (hasTeeTimes) return false;
+  // Extra check: must have at least 3 "Hole N" entries to be a real shotgun draw
+  const holeCount = (text.match(/Hole\s+\d+/gi)||[]).length;
+  return holeCount >= 3;
 }
 
 function updateWave2Preview() {
@@ -1045,10 +1048,13 @@ function calcTimes(teeTime, startHole, holesCount){
   const res=[];
   let cum=0;
   for(let i=0;i<holesCount;i++){
-    const idx=(si+i)%18;
+    // Wrap by holesCount so 9-hole courses loop back to hole 1 after hole 9
+    const holeIdx=(si+i)%holesCount;
+    const intervalIdx=holeIdx;
+    const interval=db.intervals[intervalIdx]||13;
     const t=h*60+m+cum;
-    res.push({hole:idx+1,time:fmt(t),completeBy:fmt(t+(db.intervals[idx]||13)),completeMins:t+(db.intervals[idx]||13),teeMins:t});
-    cum+=db.intervals[idx]||13;
+    res.push({hole:holeIdx+1,time:fmt(t),completeBy:fmt(t+interval),completeMins:t+interval,teeMins:t});
+    cum+=interval;
   }
   return res;
 }
