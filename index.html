@@ -81,12 +81,23 @@
   .hole-cell{background:var(--bg2);border-radius:var(--radius);padding:8px 4px;text-align:center}
   .hole-num{font-size:10px;color:var(--text2);margin-bottom:2px}
   .hole-time{font-size:15px;font-weight:600}
-  .hole-cell.current{background:var(--warning-bg);border:2px solid var(--warning-text)}
-  .hole-cell.current .hole-num{color:var(--warning-text)}
-  .hole-cell.current .hole-time{color:var(--warning-text)}
-  .hole-cell.current .hole-by{color:var(--warning-text)}
-  .hole-cell.done{opacity:0.4}
   .hole-by{font-size:10px;color:var(--text3);margin-top:2px}
+  .hole-cell.done{opacity:0.4}
+  .hole-cell.current{
+    background:var(--warning-text);
+    border-radius:var(--radius);
+    padding:10px 6px;
+    grid-column: span 1;
+    transform:scale(1.08);
+    z-index:1;
+    position:relative;
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  }
+  .hole-cell.current .hole-num{color:rgba(255,255,255,0.85);font-size:11px;font-weight:500}
+  .hole-cell.current .hole-time{color:#fff;font-size:17px;font-weight:700}
+  .hole-cell.current .hole-label{font-size:9px;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1px}
+  .hole-cell.current .hole-by{color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px}
+  .hole-cell.current .hole-by-label{font-size:9px;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:0.05em;margin-top:4px}
   /* ── CLOCK BAR ── */
   .clock-bar{background:var(--info-bg);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:1rem;display:flex;align-items:center;gap:10px}
   .clock-time{font-size:22px;font-weight:700;color:var(--info-text);font-variant-numeric:tabular-nums}
@@ -846,25 +857,35 @@ function renderGroupCard(g, r, showClock) {
 
   const holesHtml = holeTimes.map((h, i) => {
     let cls = 'hole-cell';
-    if (showClock && roundStarted && !roundFinished) {
-      if (i === currentIdx) cls += ' current';
-      else if (i < currentIdx || (currentIdx === -1 && roundStarted)) cls += ' done';
+    const isCurrent = showClock && roundStarted && !roundFinished && i === currentIdx;
+    const isDone = showClock && roundStarted && !roundFinished && (i < currentIdx || (currentIdx === -1 && roundStarted));
+    if (isCurrent) cls += ' current';
+    else if (isDone) cls += ' done';
+
+    if (isCurrent) {
+      return `<div class="${cls}">
+        <div class="hole-num">Hole ${h.hole}</div>
+        <div class="hole-label">Tee off</div>
+        <div class="hole-time">${h.time}</div>
+        <div class="hole-by-label">Finish by</div>
+        <div class="hole-by">${h.completeBy}</div>
+      </div>`;
     }
     return `<div class="${cls}">
       <div class="hole-num">Hole ${h.hole}</div>
       <div class="hole-time">${h.time}</div>
-      <div class="hole-by">by ${h.completeBy}</div>
+      <div class="hole-by">${h.completeBy}</div>
     </div>`;
   }).join('');
 
-  let currentNote = '';
+  let statusBanner = '';
   if (showClock && roundStarted && !roundFinished && currentIdx >= 0) {
     const cur = holeTimes[currentIdx];
-    currentNote = `<div class="status-banner status-current">⛳ Now on hole ${cur.hole} — complete by ${cur.completeBy}</div>`;
+    statusBanner = `<div class="status-banner status-current">⛳ Now playing hole ${cur.hole} — finish by ${cur.completeBy}</div>`;
   } else if (showClock && roundFinished) {
-    currentNote = `<div class="status-banner status-done">✓ Round complete</div>`;
+    statusBanner = `<div class="status-banner status-done">✓ Round complete</div>`;
   } else if (showClock && !roundStarted && holeTimes.length) {
-    currentNote = `<div class="status-banner status-upcoming">Tees off at ${g.teeTime}</div>`;
+    statusBanner = `<div class="status-banner status-upcoming">Tees off at ${g.teeTime}</div>`;
   }
 
   return `<div class="tee-card is-${g.holesCount}">
@@ -876,8 +897,8 @@ function renderGroupCard(g, r, showClock) {
       </div>
       <div class="tee-badge">Tee ${g.teeTime}</div>
     </div>
-    <div class="holes-grid">${holesHtml}</div>
-    ${currentNote}
+    ${statusBanner}
+    <div class="holes-grid" style="margin-top:${statusBanner ? '10px' : '0'}">${holesHtml}</div>
   </div>`;
 }
 
