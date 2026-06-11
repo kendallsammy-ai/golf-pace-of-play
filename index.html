@@ -209,13 +209,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <button type="button" class="btn btn-sm btn-primary" onclick="showNewEventForm()">+ New event</button>
     </div>
     <div id="new-event-form" class="inline-form" style="display:none">
-      <div><label>Event name</label><input id="ev-name" placeholder="e.g. Futures — Opotiki Round 1" onkeydown="if(event.key==='Enter')createEvent()"/></div>
+      <div><label>Event name</label><input id="ev-name" placeholder="e.g. Futures — Opotiki Round 1" onkeydown="if(event.key==='Enter')newEvent()"/></div>
       <div class="row2" style="margin-top:0">
-        <div><label>Course</label><input id="ev-course" placeholder="e.g. Opotiki Golf Club" onkeydown="if(event.key==='Enter')createEvent()"/></div>
+        <div><label>Course</label><input id="ev-course" placeholder="e.g. Opotiki Golf Club" onkeydown="if(event.key==='Enter')newEvent()"/></div>
         <div><label>Date</label><input type="date" id="ev-date"/></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
-        <button type="button" class="btn btn-primary btn-sm" onclick="createEvent()">Create event</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="newEvent()">Create event</button>
         <button type="button" class="btn btn-sm" onclick="hideNewEventForm()">Cancel</button>
       </div>
     </div>
@@ -522,7 +522,7 @@ function goTab(id, btn) {
 function showNewEventForm() { document.getElementById('new-event-form').style.display='block'; document.getElementById('ev-name').focus(); }
 function hideNewEventForm() { document.getElementById('new-event-form').style.display='none'; }
 
-function createEvent() {
+function newEvent() {
   try {
     const nameEl = document.getElementById('ev-name');
     if (!nameEl) { alert('Form error: name field not found'); return; }
