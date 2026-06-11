@@ -523,23 +523,33 @@ function showNewEventForm() { document.getElementById('new-event-form').style.di
 function hideNewEventForm() { document.getElementById('new-event-form').style.display='none'; }
 
 function createEvent() {
-  const name = document.getElementById('ev-name').value.trim();
-  if (!name) { document.getElementById('ev-name').focus(); return; }
-  const ev = {
-    id: neid++,
-    name,
-    date: document.getElementById('ev-date').value,
-    course: document.getElementById('ev-course').value.trim(),
-    comp: '',
-    groups: []
-  };
-  db.events.push(ev);
-  db.activeId = ev.id;
-  ['ev-name','ev-date','ev-course'].forEach(id=>document.getElementById(id).value='');
-  hideNewEventForm();
-  persist();
-  renderEventList();
-  updateHeader();
+  try {
+    const nameEl = document.getElementById('ev-name');
+    if (!nameEl) { alert('Form error: name field not found'); return; }
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.style.border='1.5px solid red'; nameEl.focus(); return; }
+    nameEl.style.border='';
+    const ev = {
+      id: neid++,
+      name: name,
+      date: document.getElementById('ev-date').value,
+      course: document.getElementById('ev-course').value.trim(),
+      comp: '',
+      groups: []
+    };
+    db.events.push(ev);
+    db.activeId = ev.id;
+    document.getElementById('ev-name').value = '';
+    document.getElementById('ev-date').value = '';
+    document.getElementById('ev-course').value = '';
+    hideNewEventForm();
+    persist();
+    renderEventList();
+    updateHeader();
+  } catch(e) {
+    alert('Error creating event: ' + e.message);
+    console.error(e);
+  }
 }
 
 function selectEvent(id) {
