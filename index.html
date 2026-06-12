@@ -930,6 +930,40 @@ function parseTeeSheetExport(text) {
 }
 
 // ═══════════════════════════════════════════════
+// CLUB MATCHPLAY (singles with member numbers)
+// "8:00 Ray Dumble 300 1621 8 v Tom McKeown 217 1650 8"
+// ═══════════════════════════════════════════════
+function isPlayerMatchDraw(text) {
+  return /\d{1,2}:\d{2}\s+[A-Za-z][a-zA-Z'\-]*(?:\s+[A-Za-z][a-zA-Z'\-]*)+\s+\d{2,3}\s+\d{2,4}\s+\d+\s+v\s+/.test(text);
+}
+
+function parsePlayerMatchDraw(text) {
+  const groups = [];
+  const rx = /(\d{1,2}:\d{2})\s+((?:[A-Z][a-zA-Z'\-]*\s+)+?)(\d{2,3})\s+(\d{2,4})\s+(\d+)\s+v\s+(?:((?:[A-Z][a-zA-Z'\-]*\s+)+?)(\d{2,3})\s+(\d{2,4})\s+)?(\d+)/g;
+  let m, gnum=1;
+  while ((m = rx.exec(text)) !== null) {
+    const time = m[1];
+    const name1 = m[2].trim();
+    const hole1 = parseInt(m[5]);
+    const name2 = m[6] ? m[6].trim() : null;
+    const players = [name1];
+    if (name2) players.push(name2);
+    groups.push({
+      id: ngid++,
+      name: name2 ? `${name1} v ${name2}` : `Group ${gnum}`,
+      teeTime: time,
+      startHole: hole1,
+      holesCount: 18,
+      field: '',
+      players,
+      order: groups.length
+    });
+    gnum++;
+  }
+  return groups.sort((a,b)=>a.teeTime.localeCompare(b.teeTime)||a.startHole-b.startHole);
+}
+
+// ═══════════════════════════════════════════════
 // PDF IMPORT
 // ═══════════════════════════════════════════════
 async function importPDF(e) {
@@ -955,7 +989,11 @@ async function importPDF(e) {
     const meta = extractMeta(text);
     if (meta.course && !ev.course) ev.course = meta.course;
     if (meta.date && !ev.date) ev.date = meta.date;
-    if (isShotgunDraw(text)) {
+    if (isPlayerMatchDraw(text)) {
+      finishImport(ev, parsePlayerMatchDraw(text));
+    } else if (isInterclubDraw(text)) {
+      finishImport(ev, parseInterclubDraw(text));
+    } else if (isShotgunDraw(text)) {
       // Extract start time from PDF if present
       const stm = text.match(/Start[:\s]+(\d{1,2}:\d{2}\s*(?:am|pm)?)/i);
       if (stm) {
@@ -1019,7 +1057,11 @@ function importPasteText() {
   const ev = activeEvent(); if (!ev) { setStatus('amber','Select an event first'); return; }
   const text = document.getElementById('paste-text').value;
   if (!text.trim()) return;
-  if (isTeeSheetExport(text)) {
+  if (isPlayerMatchDraw(text)) {
+    finishImport(ev, parsePlayerMatchDraw(text));
+    document.getElementById('paste-text').value='';
+    document.getElementById('paste-form').style.display='none';
+  } else if (isTeeSheetExport(text)) {
     finishImport(ev, parseTeeSheetExport(text));
     document.getElementById('paste-text').value='';
     document.getElementById('paste-form').style.display='none';
