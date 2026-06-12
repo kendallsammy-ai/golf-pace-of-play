@@ -6,6 +6,7 @@
 <title>Golf Pace of Play</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 :root{
   --bg:#fff;--bg2:#f5f5f4;--bg3:#ebebea;
@@ -241,7 +242,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div class="upload-btn" onclick="document.getElementById('img-input').click()">
           <div class="icon">📸</div>
           <div class="label">Screenshot / Photo</div>
-          <div class="sub">AI reads any draw image</div>
+          <div class="sub">Reads text from image</div>
         </div>
         <div class="upload-btn" onclick="showPasteImport()">
           <div class="icon">📋</div>
@@ -274,7 +275,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div id="upload-grid-bottom" style="display:none">
       <div style="height:0"></div>
       </div>
-      <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="importPDF(event)"/>
+      <input type="file" id="pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="importPDF(event)"/>
       <input type="file" id="img-input" accept="image/*" style="display:none" onchange="importImage(event)"/>
       <div id="paste-form" style="display:none">
         <label>Paste draw text</label>
@@ -934,10 +935,15 @@ function parseTeeSheetExport(text) {
 async function importPDF(e) {
   const file = e.target.files[0]; if (!file) return;
   const ev = activeEvent(); if (!ev) { setStatus('amber','Select an event first'); return; }
+  if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+    setStatus('red','That file doesn\'t look like a PDF. On some phones, photos of a draw get saved as images — try the Screenshot/Photo option instead.');
+    e.target.value=''; return;
+  }
   setStatus('amber','Reading PDF…');
   try {
     const buf = await file.arrayBuffer();
     const lib = window['pdfjs-dist/build/pdf'];
+    if (!lib) throw new Error('PDF library failed to load — check your internet connection and try again');
     lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const pdf = await lib.getDocument({data:buf}).promise;
     let text = '';
@@ -973,61 +979,33 @@ async function importPDF(e) {
 }
 
 // ═══════════════════════════════════════════════
-// IMAGE / SCREENSHOT IMPORT (Claude Vision)
+// IMAGE / SCREENSHOT IMPORT (on-device OCR)
 // ═══════════════════════════════════════════════
 async function importImage(e) {
   const file = e.target.files[0]; if (!file) return;
-  const ev = activeEvent(); if (!ev) { setStatus('amber','Select an event first'); return; }
-  setStatus('amber','Reading image with AI…');
+  const ev = activeEvent(); if (!ev) { setStatus('amber','Select an event first'); e.target.value=''; return; }
+  setStatus('amber','Reading text from image… this can take 10-20 seconds');
   try {
-    const base64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
-    const mediaType = file.type||'image/jpeg';
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:2000,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
-            {type:'text',text:`Extract the golf tournament draw from this image. Return ONLY a JSON array of groups, no other text. Format:
-[{"name":"Group 1","teeTime":"10:00","startHole":1,"holesCount":18,"field":"Futures 18","players":["Full Name 1","Full Name 2"]},...]
-Rules:
-- teeTime in 24hr HH:MM format
-- startHole is the hole number they tee off from
-- holesCount is 9 or 18
-- field is the competition field name if visible (e.g. "Futures 18", "Futures 9")
-- Include all players exactly as shown
-- If tee times are in AM/PM convert to 24hr
-- Return only the JSON array, nothing else`}
-          ]
-        }]
-      })
+    if (!window.Tesseract) throw new Error('OCR library failed to load — check your internet connection and try again');
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          setStatus('amber', `Reading image… ${Math.round((m.progress||0)*100)}%`);
+        }
+      }
     });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error.message);
-    const text = data.content.map(c=>c.text||'').join('');
-    let groups;
-    try {
-      const clean = text.replace(/```json|```/g,'').trim();
-      groups = JSON.parse(clean);
-    } catch(pe) { throw new Error('Could not parse AI response: '+text.substring(0,100)); }
-    if (!Array.isArray(groups)||!groups.length) throw new Error('No groups found in image');
-    const imported = groups.map(g=>({
-      id: ngid++,
-      name: g.name||`Group ${ngid}`,
-      teeTime: g.teeTime,
-      startHole: parseInt(g.startHole)||1,
-      holesCount: parseInt(g.holesCount)||18,
-      field: g.field||'',
-      players: g.players||[],
-      order: (ev.groups.length)
-    }));
-    finishImport(ev, imported, true);
-  } catch(err) { setStatus('red','Image import failed: '+err.message); }
-  e.target.value='';
+    const text = result.data.text;
+    if (!text || text.trim().length < 10) {
+      throw new Error('Could not read any text from this image. Try a clearer, less angled photo, or use Paste text instead.');
+    }
+    // Show the OCR'd text for review before importing - OCR isn't perfect
+    document.getElementById('paste-text').value = text;
+    document.getElementById('paste-form').style.display = 'block';
+    setStatus('green', 'Text extracted — please check it looks right below, then click Import. Fix any typos first if needed.');
+  } catch(err) {
+    setStatus('red', 'Image import failed: ' + err.message);
+  }
+  e.target.value = '';
 }
 
 // ═══════════════════════════════════════════════
