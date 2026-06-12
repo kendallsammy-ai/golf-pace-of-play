@@ -835,6 +835,100 @@ function parseShotgunDraw(text, startTime, holes, wave2Time) {
 }
 
 // ═══════════════════════════════════════════════
+// INTERCLUB FOURSOMES (Tee #1 / Tee #2 parallel matches)
+// ═══════════════════════════════════════════════
+function isInterclubDraw(text) {
+  // Looks for "TIME  Club  N&N  v  Club  N&N" pattern (tab or multi-space separated)
+  return /\d{1,2}:\d{2}[\t\s]+[A-Za-z][A-Za-z\s]*?[\t\s]+\d+&\d+[\t\s]+v[\t\s]+[A-Za-z]/i.test(text);
+}
+
+function parseInterclubDraw(text) {
+  const groups = [];
+  const lines = text.split(/\r?\n/).filter(l => l.trim() && !/^Tee\s*#/i.test(l.trim()));
+  // Match: TIME  TeamA  N&N  v  TeamB  N&N  (separated by tabs or 2+ spaces)
+  const rx = /(\d{1,2}:\d{2})[\t ]{1,}([A-Za-z][A-Za-z'\.\s]*?)[\t ]{2,}(\d+&\d+)[\t ]+v[\t ]+([A-Za-z][A-Za-z'\.\s]*?)[\t ]{2,}(\d+&\d+)/g;
+  let gnum = 1;
+  lines.forEach(line => {
+    let m;
+    rx.lastIndex = 0;
+    while ((m = rx.exec(line)) !== null) {
+      const time = m[1];
+      const teamA = m[2].trim();
+      const numsA = m[3];
+      const teamB = m[4].trim();
+      const numsB = m[5];
+      groups.push({
+        id: ngid++,
+        name: `${teamA} (${numsA}) v ${teamB} (${numsB})`,
+        teeTime: time,
+        startHole: 1,
+        holesCount: 18,
+        field: 'Interclub',
+        players: [`${teamA} ${numsA}`, `${teamB} ${numsB}`],
+        order: groups.length
+      });
+      gnum++;
+    }
+  });
+  return groups.sort((a,b)=>a.teeTime.localeCompare(b.teeTime));
+}
+
+// ═══════════════════════════════════════════════
+// TEE SHEET EXPORT (time / hole / field, one player per line)
+// ═══════════════════════════════════════════════
+function isTeeSheetExport(text) {
+  return /^\d{1,2}:\d{2}\t?\d+\t?\S+\s*$/m.test(text) && /Playing\s+\d+\s+Holes/i.test(text);
+}
+
+function parseTeeSheetExport(text) {
+  const groups = [];
+  const blocks = text.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
+  let gnum=1;
+  for (const block of blocks) {
+    const lines = block.split('\n').map(l=>l.trim()).filter(l=>l!=='');
+    if (!lines.length) continue;
+    const hdr = lines[0].match(/^(\d{1,2}:\d{2})\t?(\d+)\t?(\S+)/);
+    if (!hdr) continue;
+    const teeTime = hdr[1];
+    const startHole = parseInt(hdr[2]);
+    const field = hdr[3];
+
+    const players = [];
+    const holeCounts = [];
+    for (let i=1;i<lines.length;i++){
+      const line = lines[i];
+      if (line === '(empty)') continue;
+      if (/^[A-Za-z][\w'.\- ]*,\s*[A-Za-z]/.test(line)) {
+        const parts = line.split(',').map(s=>s.trim());
+        players.push(`${parts[1]} ${parts[0]}`);
+      } else if (line === 'Visitor') {
+        players.push('Visitor');
+      } else if (/Playing\s+(\d+)\s+Holes/i.test(line)) {
+        const hm = line.match(/Playing\s+(\d+)\s+Holes/i);
+        holeCounts.push(parseInt(hm[1]));
+      }
+      // else: metadata line (Cart Booked, Cart Exemption etc) - ignore
+    }
+    let holesCount = 18;
+    if (holeCounts.length) {
+      const counts = {};
+      holeCounts.forEach(h=>counts[h]=(counts[h]||0)+1);
+      holesCount = parseInt(Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0]);
+    }
+
+    groups.push({
+      id: ngid++,
+      name: `Group ${gnum++}`,
+      teeTime, startHole, holesCount,
+      field: field==='ALL' ? '' : field,
+      players,
+      order: groups.length
+    });
+  }
+  return groups.sort((a,b)=>a.teeTime.localeCompare(b.teeTime)||a.startHole-b.startHole);
+}
+
+// ═══════════════════════════════════════════════
 // PDF IMPORT
 // ═══════════════════════════════════════════════
 async function importPDF(e) {
@@ -947,7 +1041,15 @@ function importPasteText() {
   const ev = activeEvent(); if (!ev) { setStatus('amber','Select an event first'); return; }
   const text = document.getElementById('paste-text').value;
   if (!text.trim()) return;
-  if (isShotgunDraw(text)) {
+  if (isTeeSheetExport(text)) {
+    finishImport(ev, parseTeeSheetExport(text));
+    document.getElementById('paste-text').value='';
+    document.getElementById('paste-form').style.display='none';
+  } else if (isInterclubDraw(text)) {
+    finishImport(ev, parseInterclubDraw(text));
+    document.getElementById('paste-text').value='';
+    document.getElementById('paste-form').style.display='none';
+  } else if (isShotgunDraw(text)) {
     document.getElementById('paste-form').style.display='none';
     setStatus('amber','Shotgun draw detected — set your tee time below');
     showShotgunSettings(text);
