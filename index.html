@@ -967,7 +967,7 @@ function parsePlayerMatchDraw(text) {
 // FINALS MATCHPLAY (multi-division, "Name N v N Name", "Division Tee #N" headers)
 // ═══════════════════════════════════════════════
 function isFinalsMatchplay(text) {
-  return /\d{1,2}:\d{2}\s+(?:[A-Z][a-zA-Z'\-]+\s+){1,3}\d\s*v\s*\d\s+(?:[A-Z][a-zA-Z'\-]+\s*){1,3}/.test(text)
+  return /\d{1,2}:\d{2}\s+(?:[A-Z][a-zA-Z'\-]+\s+){1,3}\d\s+v\s+(?:[A-Z][a-zA-Z'\-]+\s+){1,3}\d/.test(text)
     && /Tee\s*#\d+/i.test(text);
 }
 
@@ -985,12 +985,12 @@ function parseFinalsMatchplay(text) {
       currentFields = headers.map(h => h[1]);
       continue;
     }
-    const rowRx = /(\d{1,2}:\d{2})\s+((?:[A-Z][a-zA-Z'\-]+\s+)*[A-Z][a-zA-Z'\-]+)\s+(\d+)\s*v\s*(\d+)\s+((?:[A-Z][a-zA-Z'\-]+\s*)+?)(?=\s*\d{1,2}:\d{2}|\s*$)/g;
+    const rowRx = /(\d{1,2}:\d{2})\s+((?:[A-Z][a-zA-Z'\-]+\s+)*[A-Z][a-zA-Z'\-]+)\s+\d+\s+v\s+((?:[A-Z][a-zA-Z'\-]+\s+)*[A-Z][a-zA-Z'\-]+)\s+\d+/g;
     let m, idx=0;
     while ((m = rowRx.exec(line)) !== null) {
       const teeTime = m[1];
       const name1 = m[2].trim();
-      const name2 = m[5].trim();
+      const name2 = m[3].trim();
       const hole = currentHoles[idx] !== undefined ? currentHoles[idx] : (currentHoles[0]||1);
       const field = currentFields[idx] !== undefined ? currentFields[idx] : (currentFields[0]||'');
       groups.push({
