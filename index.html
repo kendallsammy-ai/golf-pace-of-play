@@ -1081,7 +1081,15 @@ async function importPDF(e) {
       setStatus('amber', 'Shotgun draw detected — set your tee time below');
       showShotgunSettings(text);
     } else {
-      finishImport(ev, parseBoPDraw(text));
+      const fallback = parseBoPDraw(text);
+      if (fallback.length) {
+        finishImport(ev, fallback);
+      } else {
+        // Nothing matched - show extracted text so it can be reviewed/fixed and reported
+        document.getElementById('paste-text').value = orderedText.trim();
+        document.getElementById('paste-form').style.display = 'block';
+        setStatus('amber', "Couldn't auto-detect this draw's format. Here's the text read from the PDF — please share this with support, or edit and click Import to try matching it manually.");
+      }
     }
   } catch(err) { setStatus('red','PDF error: '+err.message); }
   e.target.value='';
